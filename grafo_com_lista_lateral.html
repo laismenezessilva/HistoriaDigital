@@ -1,0 +1,456 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#1f78b4", "font": {"color": "black"}, "id": "klara", "label": "klara", "shape": "dot", "size": 96, "title": "klara"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "josie", "label": "josie", "shape": "dot", "size": 108, "title": "josie"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "rick", "label": "rick", "shape": "dot", "size": 102, "title": "rick"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "m\u00e3e", "label": "m\u00e3e", "shape": "dot", "size": 108, "title": "m\u00e3e"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "pai", "label": "pai", "shape": "dot", "size": 82, "title": "pai"}, {"color": "#FFD700", "font": {"color": "black"}, "id": "sol", "label": "sol", "shape": "dot", "size": 50, "title": "sol"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "melania", "label": "melania", "shape": "dot", "size": 60, "title": "melania"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "rosa", "label": "rosa", "shape": "dot", "size": 60, "title": "rosa"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "chrissie", "label": "chrissie", "shape": "dot", "size": 60, "title": "chrissie"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "paul", "label": "paul", "shape": "dot", "size": 60, "title": "paul"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "helen", "label": "helen", "shape": "dot", "size": 76, "title": "helen"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "vance", "label": "vance", "shape": "dot", "size": 68, "title": "vance"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "arthur", "label": "arthur", "shape": "dot", "size": 40, "title": "arthur"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "capaldi", "label": "capaldi", "shape": "dot", "size": 76, "title": "capaldi"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "morgan", "label": "morgan", "shape": "dot", "size": 22, "title": "morgan"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "menina", "label": "menina", "shape": "dot", "size": 48, "title": "menina"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "menino", "label": "menino", "shape": "dot", "size": 70, "title": "menino"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "mulher", "label": "mulher", "shape": "dot", "size": 62, "title": "mulher"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "homem", "label": "homem", "shape": "dot", "size": 58, "title": "homem"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "b3", "label": "b3", "shape": "dot", "size": 44, "title": "b3"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "m\u00e1quina", "label": "m\u00e1quina", "shape": "dot", "size": 64, "title": "m\u00e1quina"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "rob\u00f4", "label": "rob\u00f4", "shape": "dot", "size": 30, "title": "rob\u00f4"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "vizinho", "label": "vizinho", "shape": "dot", "size": 38, "title": "vizinho"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "artista", "label": "artista", "shape": "dot", "size": 24, "title": "artista"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "motorista", "label": "motorista", "shape": "dot", "size": 34, "title": "motorista"}, {"color": "#1f78b4", "font": {"color": "black"}, "id": "empregada", "label": "empregada", "shape": "dot", "size": 56, "title": "empregada"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "amor", "label": "amor", "shape": "dot", "size": 52, "title": "amor"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "tristeza", "label": "tristeza", "shape": "dot", "size": 50, "title": "tristeza"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "alegria", "label": "alegria", "shape": "dot", "size": 54, "title": "alegria"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "raiva", "label": "raiva", "shape": "dot", "size": 60, "title": "raiva"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "medo", "label": "medo", "shape": "dot", "size": 80, "title": "medo"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "esperan\u00e7a", "label": "esperan\u00e7a", "shape": "dot", "size": 56, "title": "esperan\u00e7a"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "solid\u00e3o", "label": "solid\u00e3o", "shape": "dot", "size": 46, "title": "solid\u00e3o"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "ci\u00fame", "label": "ci\u00fame", "shape": "dot", "size": 32, "title": "ci\u00fame"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "culpa", "label": "culpa", "shape": "dot", "size": 46, "title": "culpa"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "vergonha", "label": "vergonha", "shape": "dot", "size": 26, "title": "vergonha"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "confian\u00e7a", "label": "confian\u00e7a", "shape": "dot", "size": 30, "title": "confian\u00e7a"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "ansiedade", "label": "ansiedade", "shape": "dot", "size": 42, "title": "ansiedade"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "dor", "label": "dor", "shape": "dot", "size": 36, "title": "dor"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "receio", "label": "receio", "shape": "dot", "size": 46, "title": "receio"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "gentileza", "label": "gentileza", "shape": "dot", "size": 72, "title": "gentileza"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "gratid\u00e3o", "label": "gratid\u00e3o", "shape": "dot", "size": 22, "title": "gratid\u00e3o"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "surpresa", "label": "surpresa", "shape": "dot", "size": 66, "title": "surpresa"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "tens\u00e3o", "label": "tens\u00e3o", "shape": "dot", "size": 60, "title": "tens\u00e3o"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "paz", "label": "paz", "shape": "dot", "size": 36, "title": "paz"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "felicidade", "label": "felicidade", "shape": "dot", "size": 40, "title": "felicidade"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "promessa", "label": "promessa", "shape": "dot", "size": 42, "title": "promessa"}, {"color": "#fb9a99", "font": {"color": "black"}, "id": "cuidado", "label": "cuidado", "shape": "dot", "size": 64, "title": "cuidado"}]);
+                  edges = new vis.DataSet([{"color": "#444444", "from": "klara", "to": "menino", "value": 388}, {"color": "#444444", "from": "klara", "to": "sol", "value": 501}, {"color": "#444444", "from": "klara", "to": "culpa", "value": 40}, {"color": "#444444", "from": "klara", "to": "rosa", "value": 513}, {"color": "#444444", "from": "klara", "to": "motorista", "value": 4}, {"color": "#444444", "from": "klara", "to": "m\u00e3e", "value": 2710}, {"color": "#444444", "from": "klara", "to": "josie", "value": 4554}, {"color": "#444444", "from": "klara", "to": "dor", "value": 82}, {"color": "#444444", "from": "klara", "to": "felicidade", "value": 128}, {"color": "#444444", "from": "klara", "to": "m\u00e1quina", "value": 240}, {"color": "#444444", "from": "klara", "to": "b3", "value": 237}, {"color": "#444444", "from": "klara", "to": "pai", "value": 480}, {"color": "#444444", "from": "klara", "to": "surpresa", "value": 210}, {"color": "#444444", "from": "klara", "to": "menina", "value": 355}, {"color": "#444444", "from": "klara", "to": "medo", "value": 331}, {"color": "#444444", "from": "klara", "to": "melania", "value": 389}, {"color": "#444444", "from": "klara", "to": "empregada", "value": 261}, {"color": "#444444", "from": "klara", "to": "rick", "value": 1338}, {"color": "#444444", "from": "klara", "to": "cuidado", "value": 245}, {"color": "#444444", "from": "klara", "to": "tristeza", "value": 98}, {"color": "#444444", "from": "klara", "to": "alegria", "value": 33}, {"color": "#444444", "from": "klara", "to": "raiva", "value": 89}, {"color": "#444444", "from": "klara", "to": "gentileza", "value": 68}, {"color": "#444444", "from": "klara", "to": "chrissie", "value": 499}, {"color": "#444444", "from": "klara", "to": "helen", "value": 372}, {"color": "#444444", "from": "klara", "to": "amor", "value": 40}, {"color": "#444444", "from": "klara", "to": "paz", "value": 85}, {"color": "#444444", "from": "klara", "to": "capaldi", "value": 1026}, {"color": "#444444", "from": "klara", "to": "paul", "value": 314}, {"color": "#444444", "from": "klara", "to": "ansiedade", "value": 50}, {"color": "#444444", "from": "klara", "to": "esperan\u00e7a", "value": 117}, {"color": "#444444", "from": "klara", "to": "mulher", "value": 116}, {"color": "#444444", "from": "klara", "to": "vance", "value": 41}, {"color": "#444444", "from": "klara", "to": "arthur", "value": 44}, {"color": "#444444", "from": "klara", "to": "tens\u00e3o", "value": 28}, {"color": "#444444", "from": "klara", "to": "receio", "value": 44}, {"color": "#444444", "from": "klara", "to": "promessa", "value": 18}, {"color": "#444444", "from": "klara", "to": "solid\u00e3o", "value": 42}, {"color": "#444444", "from": "josie", "to": "motorista", "value": 83}, {"color": "#444444", "from": "josie", "to": "rosa", "value": 275}, {"color": "#444444", "from": "josie", "to": "surpresa", "value": 323}, {"color": "#444444", "from": "josie", "to": "gentileza", "value": 576}, {"color": "#444444", "from": "josie", "to": "medo", "value": 909}, {"color": "#444444", "from": "josie", "to": "tristeza", "value": 312}, {"color": "#444444", "from": "josie", "to": "sol", "value": 2842}, {"color": "#444444", "from": "josie", "to": "m\u00e3e", "value": 10452}, {"color": "#444444", "from": "josie", "to": "mulher", "value": 348}, {"color": "#444444", "from": "josie", "to": "dor", "value": 129}, {"color": "#444444", "from": "josie", "to": "felicidade", "value": 47}, {"color": "#444444", "from": "josie", "to": "m\u00e1quina", "value": 506}, {"color": "#444444", "from": "josie", "to": "menina", "value": 931}, {"color": "#444444", "from": "josie", "to": "b3", "value": 496}, {"color": "#444444", "from": "josie", "to": "alegria", "value": 229}, {"color": "#444444", "from": "josie", "to": "promessa", "value": 75}, {"color": "#444444", "from": "josie", "to": "cuidado", "value": 692}, {"color": "#444444", "from": "josie", "to": "menino", "value": 553}, {"color": "#444444", "from": "josie", "to": "melania", "value": 2556}, {"color": "#444444", "from": "josie", "to": "empregada", "value": 2621}, {"color": "#444444", "from": "josie", "to": "solid\u00e3o", "value": 214}, {"color": "#444444", "from": "josie", "to": "vergonha", "value": 40}, {"color": "#444444", "from": "josie", "to": "rick", "value": 8305}, {"color": "#444444", "from": "josie", "to": "vizinho", "value": 141}, {"color": "#444444", "from": "josie", "to": "confian\u00e7a", "value": 69}, {"color": "#444444", "from": "josie", "to": "chrissie", "value": 1104}, {"color": "#444444", "from": "josie", "to": "ansiedade", "value": 70}, {"color": "#444444", "from": "josie", "to": "raiva", "value": 137}, {"color": "#444444", "from": "josie", "to": "tens\u00e3o", "value": 320}, {"color": "#444444", "from": "josie", "to": "culpa", "value": 96}, {"color": "#444444", "from": "josie", "to": "pai", "value": 2781}, {"color": "#444444", "from": "josie", "to": "esperan\u00e7a", "value": 364}, {"color": "#444444", "from": "josie", "to": "receio", "value": 99}, {"color": "#444444", "from": "josie", "to": "ci\u00fame", "value": 78}, {"color": "#444444", "from": "josie", "to": "morgan", "value": 50}, {"color": "#444444", "from": "josie", "to": "amor", "value": 234}, {"color": "#444444", "from": "josie", "to": "helen", "value": 1077}, {"color": "#444444", "from": "josie", "to": "capaldi", "value": 1585}, {"color": "#444444", "from": "josie", "to": "arthur", "value": 143}, {"color": "#444444", "from": "josie", "to": "paz", "value": 47}, {"color": "#444444", "from": "josie", "to": "homem", "value": 161}, {"color": "#444444", "from": "josie", "to": "paul", "value": 846}, {"color": "#444444", "from": "josie", "to": "vance", "value": 319}, {"color": "#444444", "from": "rick", "to": "sol", "value": 1292}, {"color": "#444444", "from": "rick", "to": "menino", "value": 467}, {"color": "#444444", "from": "rick", "to": "amor", "value": 321}, {"color": "#444444", "from": "rick", "to": "vizinho", "value": 239}, {"color": "#444444", "from": "rick", "to": "empregada", "value": 813}, {"color": "#444444", "from": "rick", "to": "melania", "value": 873}, {"color": "#444444", "from": "rick", "to": "m\u00e3e", "value": 4028}, {"color": "#444444", "from": "rick", "to": "mulher", "value": 190}, {"color": "#444444", "from": "rick", "to": "arthur", "value": 394}, {"color": "#444444", "from": "rick", "to": "ansiedade", "value": 85}, {"color": "#444444", "from": "rick", "to": "menina", "value": 464}, {"color": "#444444", "from": "rick", "to": "raiva", "value": 74}, {"color": "#444444", "from": "rick", "to": "tens\u00e3o", "value": 221}, {"color": "#444444", "from": "rick", "to": "paz", "value": 63}, {"color": "#444444", "from": "rick", "to": "solid\u00e3o", "value": 119}, {"color": "#444444", "from": "rick", "to": "b3", "value": 22}, {"color": "#444444", "from": "rick", "to": "artista", "value": 12}, {"color": "#444444", "from": "rick", "to": "receio", "value": 89}, {"color": "#444444", "from": "rick", "to": "ci\u00fame", "value": 94}, {"color": "#444444", "from": "rick", "to": "medo", "value": 443}, {"color": "#444444", "from": "rick", "to": "gentileza", "value": 333}, {"color": "#444444", "from": "rick", "to": "motorista", "value": 4}, {"color": "#444444", "from": "rick", "to": "surpresa", "value": 182}, {"color": "#444444", "from": "rick", "to": "tristeza", "value": 50}, {"color": "#444444", "from": "rick", "to": "cuidado", "value": 190}, {"color": "#444444", "from": "rick", "to": "culpa", "value": 95}, {"color": "#444444", "from": "rick", "to": "helen", "value": 2916}, {"color": "#444444", "from": "rick", "to": "chrissie", "value": 527}, {"color": "#444444", "from": "rick", "to": "pai", "value": 591}, {"color": "#444444", "from": "rick", "to": "confian\u00e7a", "value": 86}, {"color": "#444444", "from": "rick", "to": "esperan\u00e7a", "value": 253}, {"color": "#444444", "from": "rick", "to": "m\u00e1quina", "value": 147}, {"color": "#444444", "from": "rick", "to": "promessa", "value": 122}, {"color": "#444444", "from": "rick", "to": "alegria", "value": 24}, {"color": "#444444", "from": "rick", "to": "capaldi", "value": 58}, {"color": "#444444", "from": "rick", "to": "vance", "value": 1626}, {"color": "#444444", "from": "rick", "to": "paul", "value": 196}, {"color": "#444444", "from": "rick", "to": "homem", "value": 195}, {"color": "#444444", "from": "rick", "to": "rob\u00f4", "value": 46}, {"color": "#444444", "from": "m\u00e3e", "to": "rosa", "value": 273}, {"color": "#444444", "from": "m\u00e3e", "to": "sol", "value": 1103}, {"color": "#444444", "from": "m\u00e3e", "to": "menina", "value": 566}, {"color": "#444444", "from": "m\u00e3e", "to": "mulher", "value": 619}, {"color": "#444444", "from": "m\u00e3e", "to": "menino", "value": 426}, {"color": "#444444", "from": "m\u00e3e", "to": "felicidade", "value": 97}, {"color": "#444444", "from": "m\u00e3e", "to": "dor", "value": 54}, {"color": "#444444", "from": "m\u00e3e", "to": "gentileza", "value": 325}, {"color": "#444444", "from": "m\u00e3e", "to": "medo", "value": 670}, {"color": "#444444", "from": "m\u00e3e", "to": "b3", "value": 176}, {"color": "#444444", "from": "m\u00e3e", "to": "promessa", "value": 74}, {"color": "#444444", "from": "m\u00e3e", "to": "cuidado", "value": 414}, {"color": "#444444", "from": "m\u00e3e", "to": "alegria", "value": 203}, {"color": "#444444", "from": "m\u00e3e", "to": "melania", "value": 1180}, {"color": "#444444", "from": "m\u00e3e", "to": "empregada", "value": 1124}, {"color": "#444444", "from": "m\u00e3e", "to": "solid\u00e3o", "value": 173}, {"color": "#444444", "from": "m\u00e3e", "to": "vergonha", "value": 51}, {"color": "#444444", "from": "m\u00e3e", "to": "vizinho", "value": 108}, {"color": "#444444", "from": "m\u00e3e", "to": "confian\u00e7a", "value": 46}, {"color": "#444444", "from": "m\u00e3e", "to": "arthur", "value": 238}, {"color": "#444444", "from": "m\u00e3e", "to": "chrissie", "value": 984}, {"color": "#444444", "from": "m\u00e3e", "to": "raiva", "value": 256}, {"color": "#444444", "from": "m\u00e3e", "to": "paz", "value": 47}, {"color": "#444444", "from": "m\u00e3e", "to": "culpa", "value": 113}, {"color": "#444444", "from": "m\u00e3e", "to": "tristeza", "value": 154}, {"color": "#444444", "from": "m\u00e3e", "to": "m\u00e1quina", "value": 242}, {"color": "#444444", "from": "m\u00e3e", "to": "pai", "value": 1689}, {"color": "#444444", "from": "m\u00e3e", "to": "esperan\u00e7a", "value": 182}, {"color": "#444444", "from": "m\u00e3e", "to": "ci\u00fame", "value": 26}, {"color": "#444444", "from": "m\u00e3e", "to": "motorista", "value": 54}, {"color": "#444444", "from": "m\u00e3e", "to": "amor", "value": 283}, {"color": "#444444", "from": "m\u00e3e", "to": "helen", "value": 1621}, {"color": "#444444", "from": "m\u00e3e", "to": "capaldi", "value": 1862}, {"color": "#444444", "from": "m\u00e3e", "to": "tens\u00e3o", "value": 229}, {"color": "#444444", "from": "m\u00e3e", "to": "paul", "value": 832}, {"color": "#444444", "from": "m\u00e3e", "to": "surpresa", "value": 133}, {"color": "#444444", "from": "m\u00e3e", "to": "ansiedade", "value": 78}, {"color": "#444444", "from": "m\u00e3e", "to": "vance", "value": 814}, {"color": "#444444", "from": "m\u00e3e", "to": "homem", "value": 244}, {"color": "#444444", "from": "m\u00e3e", "to": "rob\u00f4", "value": 31}, {"color": "#444444", "from": "m\u00e3e", "to": "receio", "value": 36}, {"color": "#444444", "from": "pai", "to": "m\u00e1quina", "value": 429}, {"color": "#444444", "from": "pai", "to": "menina", "value": 250}, {"color": "#444444", "from": "pai", "to": "b3", "value": 85}, {"color": "#444444", "from": "pai", "to": "rosa", "value": 48}, {"color": "#444444", "from": "pai", "to": "surpresa", "value": 93}, {"color": "#444444", "from": "pai", "to": "tristeza", "value": 5}, {"color": "#444444", "from": "pai", "to": "solid\u00e3o", "value": 32}, {"color": "#444444", "from": "pai", "to": "medo", "value": 34}, {"color": "#444444", "from": "pai", "to": "capaldi", "value": 911}, {"color": "#444444", "from": "pai", "to": "paul", "value": 776}, {"color": "#444444", "from": "pai", "to": "raiva", "value": 61}, {"color": "#444444", "from": "pai", "to": "chrissie", "value": 214}, {"color": "#444444", "from": "pai", "to": "gentileza", "value": 50}, {"color": "#444444", "from": "pai", "to": "tens\u00e3o", "value": 149}, {"color": "#444444", "from": "pai", "to": "cuidado", "value": 76}, {"color": "#444444", "from": "pai", "to": "alegria", "value": 63}, {"color": "#444444", "from": "pai", "to": "sol", "value": 212}, {"color": "#444444", "from": "pai", "to": "homem", "value": 43}, {"color": "#444444", "from": "pai", "to": "esperan\u00e7a", "value": 66}, {"color": "#444444", "from": "pai", "to": "paz", "value": 15}, {"color": "#444444", "from": "pai", "to": "helen", "value": 405}, {"color": "#444444", "from": "pai", "to": "vance", "value": 67}, {"color": "#444444", "from": "pai", "to": "confian\u00e7a", "value": 29}, {"color": "#444444", "from": "pai", "to": "amor", "value": 66}, {"color": "#444444", "from": "pai", "to": "mulher", "value": 22}, {"color": "#444444", "from": "pai", "to": "empregada", "value": 47}, {"color": "#444444", "from": "pai", "to": "melania", "value": 46}, {"color": "#444444", "from": "sol", "to": "rosa", "value": 450}, {"color": "#444444", "from": "sol", "to": "medo", "value": 235}, {"color": "#444444", "from": "sol", "to": "menino", "value": 217}, {"color": "#444444", "from": "sol", "to": "culpa", "value": 50}, {"color": "#444444", "from": "sol", "to": "menina", "value": 42}, {"color": "#444444", "from": "sol", "to": "tristeza", "value": 38}, {"color": "#444444", "from": "sol", "to": "surpresa", "value": 42}, {"color": "#444444", "from": "sol", "to": "homem", "value": 150}, {"color": "#444444", "from": "sol", "to": "m\u00e1quina", "value": 386}, {"color": "#444444", "from": "sol", "to": "alegria", "value": 80}, {"color": "#444444", "from": "sol", "to": "melania", "value": 330}, {"color": "#444444", "from": "sol", "to": "empregada", "value": 381}, {"color": "#444444", "from": "sol", "to": "vergonha", "value": 2}, {"color": "#444444", "from": "sol", "to": "amor", "value": 53}, {"color": "#444444", "from": "sol", "to": "gentileza", "value": 208}, {"color": "#444444", "from": "sol", "to": "cuidado", "value": 106}, {"color": "#444444", "from": "sol", "to": "felicidade", "value": 45}, {"color": "#444444", "from": "sol", "to": "ci\u00fame", "value": 24}, {"color": "#444444", "from": "sol", "to": "receio", "value": 75}, {"color": "#444444", "from": "sol", "to": "helen", "value": 103}, {"color": "#444444", "from": "sol", "to": "raiva", "value": 27}, {"color": "#444444", "from": "sol", "to": "gratid\u00e3o", "value": 34}, {"color": "#444444", "from": "sol", "to": "capaldi", "value": 73}, {"color": "#444444", "from": "sol", "to": "chrissie", "value": 43}, {"color": "#444444", "from": "sol", "to": "esperan\u00e7a", "value": 161}, {"color": "#444444", "from": "sol", "to": "ansiedade", "value": 46}, {"color": "#444444", "from": "sol", "to": "promessa", "value": 45}, {"color": "#444444", "from": "sol", "to": "mulher", "value": 26}, {"color": "#444444", "from": "sol", "to": "vance", "value": 47}, {"color": "#444444", "from": "melania", "to": "empregada", "value": 3280}, {"color": "#444444", "from": "melania", "to": "surpresa", "value": 77}, {"color": "#444444", "from": "melania", "to": "culpa", "value": 37}, {"color": "#444444", "from": "melania", "to": "medo", "value": 114}, {"color": "#444444", "from": "melania", "to": "gentileza", "value": 56}, {"color": "#444444", "from": "melania", "to": "menino", "value": 74}, {"color": "#444444", "from": "melania", "to": "cuidado", "value": 159}, {"color": "#444444", "from": "melania", "to": "tristeza", "value": 81}, {"color": "#444444", "from": "melania", "to": "alegria", "value": 15}, {"color": "#444444", "from": "melania", "to": "esperan\u00e7a", "value": 59}, {"color": "#444444", "from": "melania", "to": "solid\u00e3o", "value": 30}, {"color": "#444444", "from": "melania", "to": "capaldi", "value": 50}, {"color": "#444444", "from": "melania", "to": "mulher", "value": 14}, {"color": "#444444", "from": "melania", "to": "tens\u00e3o", "value": 45}, {"color": "#444444", "from": "rosa", "to": "medo", "value": 96}, {"color": "#444444", "from": "rosa", "to": "menino", "value": 287}, {"color": "#444444", "from": "rosa", "to": "menina", "value": 186}, {"color": "#444444", "from": "rosa", "to": "cuidado", "value": 42}, {"color": "#444444", "from": "rosa", "to": "raiva", "value": 3}, {"color": "#444444", "from": "rosa", "to": "motorista", "value": 21}, {"color": "#444444", "from": "rosa", "to": "gentileza", "value": 30}, {"color": "#444444", "from": "rosa", "to": "surpresa", "value": 106}, {"color": "#444444", "from": "rosa", "to": "dor", "value": 160}, {"color": "#444444", "from": "rosa", "to": "felicidade", "value": 92}, {"color": "#444444", "from": "rosa", "to": "homem", "value": 50}, {"color": "#444444", "from": "rosa", "to": "b3", "value": 30}, {"color": "#444444", "from": "rosa", "to": "alegria", "value": 29}, {"color": "#444444", "from": "rosa", "to": "vance", "value": 21}, {"color": "#444444", "from": "rosa", "to": "mulher", "value": 45}, {"color": "#444444", "from": "chrissie", "to": "mulher", "value": 109}, {"color": "#444444", "from": "chrissie", "to": "medo", "value": 131}, {"color": "#444444", "from": "chrissie", "to": "menino", "value": 84}, {"color": "#444444", "from": "chrissie", "to": "gentileza", "value": 42}, {"color": "#444444", "from": "chrissie", "to": "helen", "value": 475}, {"color": "#444444", "from": "chrissie", "to": "menina", "value": 83}, {"color": "#444444", "from": "chrissie", "to": "paul", "value": 488}, {"color": "#444444", "from": "chrissie", "to": "raiva", "value": 81}, {"color": "#444444", "from": "chrissie", "to": "capaldi", "value": 520}, {"color": "#444444", "from": "chrissie", "to": "tristeza", "value": 23}, {"color": "#444444", "from": "chrissie", "to": "receio", "value": 21}, {"color": "#444444", "from": "chrissie", "to": "m\u00e1quina", "value": 33}, {"color": "#444444", "from": "chrissie", "to": "vance", "value": 120}, {"color": "#444444", "from": "chrissie", "to": "homem", "value": 28}, {"color": "#444444", "from": "paul", "to": "raiva", "value": 126}, {"color": "#444444", "from": "paul", "to": "capaldi", "value": 691}, {"color": "#444444", "from": "paul", "to": "amor", "value": 141}, {"color": "#444444", "from": "paul", "to": "tens\u00e3o", "value": 49}, {"color": "#444444", "from": "paul", "to": "cuidado", "value": 8}, {"color": "#444444", "from": "paul", "to": "homem", "value": 137}, {"color": "#444444", "from": "paul", "to": "tristeza", "value": 15}, {"color": "#444444", "from": "paul", "to": "receio", "value": 92}, {"color": "#444444", "from": "paul", "to": "m\u00e1quina", "value": 281}, {"color": "#444444", "from": "paul", "to": "medo", "value": 42}, {"color": "#444444", "from": "paul", "to": "helen", "value": 313}, {"color": "#444444", "from": "paul", "to": "vance", "value": 181}, {"color": "#444444", "from": "paul", "to": "esperan\u00e7a", "value": 16}, {"color": "#444444", "from": "paul", "to": "mulher", "value": 37}, {"color": "#444444", "from": "helen", "to": "gentileza", "value": 12}, {"color": "#444444", "from": "helen", "to": "cuidado", "value": 40}, {"color": "#444444", "from": "helen", "to": "receio", "value": 36}, {"color": "#444444", "from": "helen", "to": "surpresa", "value": 110}, {"color": "#444444", "from": "helen", "to": "solid\u00e3o", "value": 79}, {"color": "#444444", "from": "helen", "to": "amor", "value": 76}, {"color": "#444444", "from": "helen", "to": "medo", "value": 32}, {"color": "#444444", "from": "helen", "to": "arthur", "value": 75}, {"color": "#444444", "from": "helen", "to": "promessa", "value": 79}, {"color": "#444444", "from": "helen", "to": "m\u00e1quina", "value": 77}, {"color": "#444444", "from": "helen", "to": "vizinho", "value": 5}, {"color": "#444444", "from": "helen", "to": "alegria", "value": 30}, {"color": "#444444", "from": "helen", "to": "tens\u00e3o", "value": 23}, {"color": "#444444", "from": "helen", "to": "capaldi", "value": 74}, {"color": "#444444", "from": "helen", "to": "vance", "value": 1620}, {"color": "#444444", "from": "helen", "to": "homem", "value": 113}, {"color": "#444444", "from": "helen", "to": "menino", "value": 50}, {"color": "#444444", "from": "helen", "to": "culpa", "value": 43}, {"color": "#444444", "from": "helen", "to": "esperan\u00e7a", "value": 80}, {"color": "#444444", "from": "helen", "to": "rob\u00f4", "value": 49}, {"color": "#444444", "from": "vance", "to": "cuidado", "value": 21}, {"color": "#444444", "from": "vance", "to": "confian\u00e7a", "value": 21}, {"color": "#444444", "from": "vance", "to": "homem", "value": 149}, {"color": "#444444", "from": "vance", "to": "capaldi", "value": 28}, {"color": "#444444", "from": "vance", "to": "surpresa", "value": 58}, {"color": "#444444", "from": "vance", "to": "menino", "value": 42}, {"color": "#444444", "from": "vance", "to": "mulher", "value": 51}, {"color": "#444444", "from": "vance", "to": "culpa", "value": 68}, {"color": "#444444", "from": "vance", "to": "promessa", "value": 26}, {"color": "#444444", "from": "vance", "to": "m\u00e1quina", "value": 16}, {"color": "#444444", "from": "vance", "to": "esperan\u00e7a", "value": 50}, {"color": "#444444", "from": "vance", "to": "rob\u00f4", "value": 36}, {"color": "#444444", "from": "vance", "to": "arthur", "value": 30}, {"color": "#444444", "from": "vance", "to": "raiva", "value": 10}, {"color": "#444444", "from": "arthur", "to": "mulher", "value": 41}, {"color": "#444444", "from": "arthur", "to": "promessa", "value": 13}, {"color": "#444444", "from": "arthur", "to": "gentileza", "value": 18}, {"color": "#444444", "from": "arthur", "to": "esperan\u00e7a", "value": 50}, {"color": "#444444", "from": "capaldi", "to": "empregada", "value": 110}, {"color": "#444444", "from": "capaldi", "to": "medo", "value": 111}, {"color": "#444444", "from": "capaldi", "to": "vizinho", "value": 22}, {"color": "#444444", "from": "capaldi", "to": "homem", "value": 83}, {"color": "#444444", "from": "capaldi", "to": "cuidado", "value": 91}, {"color": "#444444", "from": "capaldi", "to": "alegria", "value": 83}, {"color": "#444444", "from": "capaldi", "to": "amor", "value": 100}, {"color": "#444444", "from": "capaldi", "to": "gentileza", "value": 8}, {"color": "#444444", "from": "capaldi", "to": "raiva", "value": 84}, {"color": "#444444", "from": "capaldi", "to": "ansiedade", "value": 37}, {"color": "#444444", "from": "capaldi", "to": "tens\u00e3o", "value": 140}, {"color": "#444444", "from": "capaldi", "to": "receio", "value": 32}, {"color": "#444444", "from": "capaldi", "to": "m\u00e1quina", "value": 119}, {"color": "#444444", "from": "capaldi", "to": "esperan\u00e7a", "value": 17}, {"color": "#444444", "from": "capaldi", "to": "surpresa", "value": 50}, {"color": "#444444", "from": "capaldi", "to": "menino", "value": 50}, {"color": "#444444", "from": "capaldi", "to": "paz", "value": 26}, {"color": "#444444", "from": "menina", "to": "mulher", "value": 50}, {"color": "#444444", "from": "menina", "to": "menino", "value": 353}, {"color": "#444444", "from": "menina", "to": "m\u00e1quina", "value": 67}, {"color": "#444444", "from": "menina", "to": "b3", "value": 312}, {"color": "#444444", "from": "menina", "to": "surpresa", "value": 38}, {"color": "#444444", "from": "menina", "to": "medo", "value": 42}, {"color": "#444444", "from": "menino", "to": "medo", "value": 41}, {"color": "#444444", "from": "menino", "to": "culpa", "value": 48}, {"color": "#444444", "from": "menino", "to": "m\u00e1quina", "value": 117}, {"color": "#444444", "from": "menino", "to": "b3", "value": 98}, {"color": "#444444", "from": "menino", "to": "surpresa", "value": 43}, {"color": "#444444", "from": "menino", "to": "felicidade", "value": 14}, {"color": "#444444", "from": "menino", "to": "cuidado", "value": 33}, {"color": "#444444", "from": "menino", "to": "empregada", "value": 76}, {"color": "#444444", "from": "menino", "to": "vizinho", "value": 87}, {"color": "#444444", "from": "menino", "to": "mulher", "value": 165}, {"color": "#444444", "from": "menino", "to": "gentileza", "value": 20}, {"color": "#444444", "from": "menino", "to": "ansiedade", "value": 14}, {"color": "#444444", "from": "menino", "to": "raiva", "value": 4}, {"color": "#444444", "from": "mulher", "to": "homem", "value": 43}, {"color": "#444444", "from": "mulher", "to": "vizinho", "value": 71}, {"color": "#444444", "from": "mulher", "to": "medo", "value": 73}, {"color": "#444444", "from": "mulher", "to": "gentileza", "value": 48}, {"color": "#444444", "from": "mulher", "to": "paz", "value": 30}, {"color": "#444444", "from": "mulher", "to": "m\u00e1quina", "value": 118}, {"color": "#444444", "from": "mulher", "to": "raiva", "value": 18}, {"color": "#444444", "from": "homem", "to": "ansiedade", "value": 46}, {"color": "#444444", "from": "homem", "to": "dor", "value": 1}, {"color": "#444444", "from": "homem", "to": "vizinho", "value": 27}, {"color": "#444444", "from": "homem", "to": "amor", "value": 102}, {"color": "#444444", "from": "homem", "to": "motorista", "value": 5}, {"color": "#444444", "from": "homem", "to": "surpresa", "value": 36}, {"color": "#444444", "from": "homem", "to": "tens\u00e3o", "value": 10}, {"color": "#444444", "from": "b3", "to": "surpresa", "value": 69}, {"color": "#444444", "from": "b3", "to": "felicidade", "value": 15}, {"color": "#444444", "from": "b3", "to": "cuidado", "value": 34}, {"color": "#444444", "from": "b3", "to": "tens\u00e3o", "value": 33}, {"color": "#444444", "from": "m\u00e1quina", "to": "felicidade", "value": 37}, {"color": "#444444", "from": "m\u00e1quina", "to": "raiva", "value": 43}, {"color": "#444444", "from": "m\u00e1quina", "to": "surpresa", "value": 43}, {"color": "#444444", "from": "m\u00e1quina", "to": "gentileza", "value": 46}, {"color": "#444444", "from": "m\u00e1quina", "to": "tens\u00e3o", "value": 35}, {"color": "#444444", "from": "m\u00e1quina", "to": "medo", "value": 33}, {"color": "#444444", "from": "m\u00e1quina", "to": "esperan\u00e7a", "value": 3}, {"color": "#444444", "from": "m\u00e1quina", "to": "cuidado", "value": 24}, {"color": "#444444", "from": "rob\u00f4", "to": "esperan\u00e7a", "value": 4}, {"color": "#444444", "from": "vizinho", "to": "alegria", "value": 37}, {"color": "#444444", "from": "artista", "to": "ci\u00fame", "value": 43}, {"color": "#444444", "from": "motorista", "to": "medo", "value": 47}, {"color": "#444444", "from": "empregada", "to": "surpresa", "value": 77}, {"color": "#444444", "from": "empregada", "to": "culpa", "value": 35}, {"color": "#444444", "from": "empregada", "to": "medo", "value": 85}, {"color": "#444444", "from": "empregada", "to": "gentileza", "value": 62}, {"color": "#444444", "from": "empregada", "to": "cuidado", "value": 125}, {"color": "#444444", "from": "empregada", "to": "tristeza", "value": 65}, {"color": "#444444", "from": "empregada", "to": "esperan\u00e7a", "value": 68}, {"color": "#444444", "from": "empregada", "to": "solid\u00e3o", "value": 31}, {"color": "#444444", "from": "empregada", "to": "tens\u00e3o", "value": 44}, {"color": "#444444", "from": "amor", "to": "solid\u00e3o", "value": 50}, {"color": "#444444", "from": "amor", "to": "medo", "value": 40}, {"color": "#444444", "from": "amor", "to": "cuidado", "value": 40}, {"color": "#444444", "from": "amor", "to": "gentileza", "value": 6}, {"color": "#444444", "from": "amor", "to": "ansiedade", "value": 18}, {"color": "#444444", "from": "amor", "to": "dor", "value": 1}, {"color": "#444444", "from": "tristeza", "to": "raiva", "value": 75}, {"color": "#444444", "from": "tristeza", "to": "gentileza", "value": 48}, {"color": "#444444", "from": "tristeza", "to": "surpresa", "value": 23}, {"color": "#444444", "from": "tristeza", "to": "alegria", "value": 48}, {"color": "#444444", "from": "tristeza", "to": "medo", "value": 49}, {"color": "#444444", "from": "alegria", "to": "medo", "value": 167}, {"color": "#444444", "from": "alegria", "to": "promessa", "value": 11}, {"color": "#444444", "from": "alegria", "to": "tens\u00e3o", "value": 43}, {"color": "#444444", "from": "alegria", "to": "gentileza", "value": 13}, {"color": "#444444", "from": "alegria", "to": "receio", "value": 40}, {"color": "#444444", "from": "raiva", "to": "gentileza", "value": 68}, {"color": "#444444", "from": "raiva", "to": "tens\u00e3o", "value": 25}, {"color": "#444444", "from": "raiva", "to": "medo", "value": 94}, {"color": "#444444", "from": "raiva", "to": "surpresa", "value": 40}, {"color": "#444444", "from": "raiva", "to": "ansiedade", "value": 46}, {"color": "#444444", "from": "medo", "to": "promessa", "value": 65}, {"color": "#444444", "from": "medo", "to": "gentileza", "value": 56}, {"color": "#444444", "from": "medo", "to": "ci\u00fame", "value": 37}, {"color": "#444444", "from": "medo", "to": "solid\u00e3o", "value": 127}, {"color": "#444444", "from": "medo", "to": "tens\u00e3o", "value": 15}, {"color": "#444444", "from": "medo", "to": "culpa", "value": 17}, {"color": "#444444", "from": "medo", "to": "cuidado", "value": 12}, {"color": "#444444", "from": "medo", "to": "receio", "value": 42}, {"color": "#444444", "from": "esperan\u00e7a", "to": "cuidado", "value": 41}, {"color": "#444444", "from": "esperan\u00e7a", "to": "gentileza", "value": 24}, {"color": "#444444", "from": "esperan\u00e7a", "to": "paz", "value": 40}, {"color": "#444444", "from": "solid\u00e3o", "to": "culpa", "value": 15}, {"color": "#444444", "from": "solid\u00e3o", "to": "surpresa", "value": 37}, {"color": "#444444", "from": "solid\u00e3o", "to": "dor", "value": 40}, {"color": "#444444", "from": "culpa", "to": "surpresa", "value": 32}, {"color": "#444444", "from": "ansiedade", "to": "promessa", "value": 41}, {"color": "#444444", "from": "dor", "to": "felicidade", "value": 93}, {"color": "#444444", "from": "receio", "to": "tens\u00e3o", "value": 37}, {"color": "#444444", "from": "receio", "to": "gentileza", "value": 3}, {"color": "#444444", "from": "gentileza", "to": "surpresa", "value": 58}, {"color": "#444444", "from": "gentileza", "to": "tens\u00e3o", "value": 31}, {"color": "#444444", "from": "gentileza", "to": "cuidado", "value": 7}, {"color": "#444444", "from": "surpresa", "to": "tens\u00e3o", "value": 46}, {"color": "#444444", "from": "tens\u00e3o", "to": "cuidado", "value": 13}, {"color": "#444444", "from": "felicidade", "to": "cuidado", "value": 31}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "barnesHut": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.3,
+            "damping": 0.09,
+            "gravitationalConstant": -30000,
+            "springConstant": 0.001,
+            "springLength": 200
+        },
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    
+<style>
+    /* Estilo do Painel Lateral */
+    #info-panel {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 300px;
+        max-height: 80%;
+        background-color: rgba(255, 255, 255, 0.95);
+        border: 1px solid #ccc;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        padding: 15px;
+        border-radius: 8px;
+        overflow-y: auto;
+        font-family: Arial, sans-serif;
+        display: none; /* Começa escondido */
+        z-index: 9999;
+    }
+    #info-header {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #333;
+        border-bottom: 2px solid #1f78b4;
+        padding-bottom: 5px;
+    }
+    .connection-item {
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+    }
+    .badge {
+        display: inline-block;
+        padding: 2px 6px;
+        font-size: 11px;
+        border-radius: 4px;
+        color: white;
+        margin-right: 5px;
+    }
+    .badge-entidade { background-color: #1f78b4; }
+    .badge-sentimento { background-color: #fb9a99; }
+    .badge-sol { background-color: #FFD700; color: black; }
+</style>
+
+<div id="info-panel">
+    <div id="info-header">Detalhes</div>
+    <div id="info-content">Clique em um nó...</div>
+</div>
+
+<script type="text/javascript">
+    // Espera a rede carregar
+    network.on("click", function (params) {
+        var panel = document.getElementById("info-panel");
+        var header = document.getElementById("info-header");
+        var content = document.getElementById("info-content");
+
+        if (params.nodes.length > 0) {
+            // Pegou o nó clicado
+            var nodeId = params.nodes[0];
+            var connectedEdges = network.getConnectedEdges(nodeId);
+            var connectedNodes = network.getConnectedNodes(nodeId);
+            
+            // Mostra o painel
+            panel.style.display = "block";
+            header.innerText = "Análise: " + nodeId.toUpperCase();
+            
+            // Monta a lista de conexões
+            var htmlList = "";
+            
+            // Cria um array de objetos para ordenar
+            var connections = [];
+            
+            connectedNodes.forEach(function(neighborId) {
+                // Tenta achar o peso da aresta (gambiarra visual pois pyvis esconde os dados brutos)
+                // Vamos apenas listar os vizinhos
+                var typeClass = "badge-entidade"; // Default
+                // Tenta adivinhar o tipo pela cor (hack simples) ou lista fixa se tivessemos acesso
+                
+                connections.push({id: neighborId});
+            });
+
+            // Se não tiver conexões
+            if (connections.length === 0) {
+                htmlList = "Nenhuma conexão.";
+            } else {
+                htmlList += "<strong>Conectado com (" + connections.length + "):</strong><br>";
+                connections.forEach(function(conn) {
+                    htmlList += "<div class='connection-item'> ➤ " + conn.id + "</div>";
+                });
+            }
+            
+            content.innerHTML = htmlList;
+        } else {
+            // Clicou no vazio, esconde o painel
+            panel.style.display = "none";
+        }
+    });
+</script>
+</body>
+</html>
